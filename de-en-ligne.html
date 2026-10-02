@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dé en ligne - Lanceur de dés</title>
+<style>
+  *{box-sizing:border-box}
+  body{
+    margin:0;font-family:Arial,Helvetica,sans-serif;
+    min-height:100vh;background:linear-gradient(135deg,#eef2ff,#f8fafc);
+    color:#172033;display:flex;justify-content:center;padding:28px 14px
+  }
+  .app{width:min(900px,100%)}
+  .card{
+    background:#fff;border-radius:22px;padding:28px;
+    box-shadow:0 15px 45px rgba(15,23,42,.12)
+  }
+  h1{text-align:center;margin:0 0 8px;font-size:clamp(28px,6vw,44px)}
+  .subtitle{text-align:center;color:#64748b;margin:0 0 25px}
+  .controls{
+    display:grid;grid-template-columns:1fr 1fr auto;gap:14px;
+    align-items:end
+  }
+  label{display:block;font-weight:700;margin-bottom:7px}
+  select,button{
+    width:100%;height:50px;border-radius:12px;border:1px solid #dbe2ea;
+    font-size:17px;padding:0 14px
+  }
+  select{background:#fff}
+  button{
+    border:0;background:#2563eb;color:#fff;font-weight:800;
+    cursor:pointer;transition:.15s;box-shadow:0 6px 16px rgba(37,99,235,.25)
+  }
+  button:hover{transform:translateY(-1px);background:#1d4ed8}
+  button:active{transform:translateY(1px)}
+  .result{
+    margin-top:25px;background:#f8fafc;border-radius:18px;
+    min-height:260px;padding:22px;text-align:center
+  }
+  .dice-area{
+    min-height:165px;display:flex;flex-wrap:wrap;
+    justify-content:center;align-items:center;gap:15px
+  }
+  .die{
+    width:88px;height:88px;border-radius:18px;background:#fff;
+    display:flex;align-items:center;justify-content:center;
+    font-size:42px;font-weight:900;
+    box-shadow:0 9px 20px rgba(15,23,42,.15);
+    border:3px solid #e2e8f0
+  }
+  .rolling{animation:roll .55s ease-in-out infinite}
+  @keyframes roll{
+    0%{transform:rotate(-10deg) scale(.9)}
+    25%{transform:rotate(12deg) scale(1.05)}
+    50%{transform:rotate(-14deg) scale(.95)}
+    75%{transform:rotate(10deg) scale(1.04)}
+    100%{transform:rotate(-10deg) scale(.9)}
+  }
+  .total{font-size:28px;font-weight:900;margin-top:10px}
+  .hint{color:#64748b;margin-top:6px}
+  .history{margin-top:24px}
+  .history h2{font-size:20px;margin:0 0 10px}
+  .history-list{display:flex;flex-direction:column;gap:8px}
+  .history-item{
+    background:#f8fafc;border-radius:10px;padding:10px 13px;
+    display:flex;justify-content:space-between
+  }
+  .clear{
+    margin-top:12px;background:#e2e8f0;color:#334155;
+    box-shadow:none;height:42px;font-size:14px
+  }
+  .clear:hover{background:#cbd5e1}
+  footer{text-align:center;color:#94a3b8;font-size:13px;margin-top:16px}
+  @media(max-width:650px){
+    .controls{grid-template-columns:1fr 1fr}
+    .controls button{grid-column:1/-1}
+    .card{padding:20px}
+    .die{width:72px;height:72px;font-size:34px}
+  }
+</style>
+</head>
+<body>
+<main class="app">
+  <section class="card">
+    <h1>🎲 Dé en ligne</h1>
+    <p class="subtitle">Lance tes dés aléatoirement, simplement et gratuitement.</p>
+
+    <div class="controls">
+      <div>
+        <label for="diceCount">Nombre de dés</label>
+        <select id="diceCount">
+          <option>1</option><option>2</option><option>3</option><option>4</option>
+          <option>5</option><option>6</option><option>7</option><option>8</option>
+          <option>9</option><option>10</option>
+        </select>
+      </div>
+      <div>
+        <label for="faces">Nombre de faces</label>
+        <select id="faces">
+          <option value="2">2</option><option value="4">4</option>
+          <option value="6" selected>6</option><option value="8">8</option>
+          <option value="10">10</option><option value="12">12</option>
+          <option value="20">20</option><option value="100">100</option>
+        </select>
+      </div>
+      <button id="rollBtn">🎲 Lancer</button>
+    </div>
+
+    <div class="result">
+      <div id="diceArea" class="dice-area">
+        <div class="die">?</div>
+      </div>
+      <div id="total" class="total">Résultat : —</div>
+      <div id="hint" class="hint">Choisis tes dés puis clique sur « Lancer ».</div>
+    </div>
+
+    <div class="history">
+      <h2>Historique</h2>
+      <div id="historyList" class="history-list">
+        <div class="hint">Aucun lancer pour le moment.</div>
+      </div>
+      <button id="clearBtn" class="clear">Effacer l'historique</button>
+    </div>
+  </section>
+  <footer>Dé en ligne • Fonctionne directement dans ton navigateur</footer>
+</main>
+
+<script>
+const diceCount = document.getElementById('diceCount');
+const faces = document.getElementById('faces');
+const rollBtn = document.getElementById('rollBtn');
+const diceArea = document.getElementById('diceArea');
+const totalEl = document.getElementById('total');
+const hint = document.getElementById('hint');
+const historyList = document.getElementById('historyList');
+const clearBtn = document.getElementById('clearBtn');
+
+let history = [];
+
+function randomDie(max){
+  return Math.floor(Math.random() * max) + 1;
+}
+
+function displayDice(values, rolling=false){
+  diceArea.innerHTML = '';
+  values.forEach(value=>{
+    const die = document.createElement('div');
+    die.className = 'die' + (rolling ? ' rolling' : '');
+    die.textContent = rolling ? '🎲' : value;
+    diceArea.appendChild(die);
+  });
+}
+
+function addHistory(values, max){
+  const sum = values.reduce((a,b)=>a+b,0);
+  history.unshift({
+    values:[...values], max, sum,
+    time:new Date().toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'})
+  });
+  history = history.slice(0,10);
+  renderHistory();
+}
+
+function renderHistory(){
+  if(!history.length){
+    historyList.innerHTML = '<div class="hint">Aucun lancer pour le moment.</div>';
+    return;
+  }
+  historyList.innerHTML = history.map((h,i)=>`
+    <div class="history-item">
+      <span>Lancer ${history.length-i} — ${h.values.join(' + ')}</span>
+      <strong>Total : ${h.sum}</strong>
+    </div>
+  `).join('');
+}
+
+async function roll(){
+  const count = Number(diceCount.value);
+  const max = Number(faces.value);
+  rollBtn.disabled = true;
+  rollBtn.textContent = '🎲 Lancement...';
+  hint.textContent = 'Les dés roulent...';
+
+  displayDice(Array(count).fill(0), true);
+
+  await new Promise(resolve=>setTimeout(resolve,650));
+
+  const values = Array.from({length:count},()=>randomDie(max));
+  displayDice(values, false);
+
+  const sum = values.reduce((a,b)=>a+b,0);
+  totalEl.textContent = `Résultat : ${sum}`;
+  hint.textContent = `${count} dé${count>1?'s':''} à ${max} faces`;
+  addHistory(values,max);
+
+  rollBtn.disabled = false;
+  rollBtn.textContent = '🎲 Lancer';
+}
+
+rollBtn.addEventListener('click', roll);
+clearBtn.addEventListener('click', ()=>{
+  history = [];
+  renderHistory();
+});
+
+document.addEventListener('keydown', e=>{
+  if(e.code === 'Space' && !rollBtn.disabled){
+    e.preventDefault();
+    roll();
+  }
+});
+</script>
+</body>
+</html>
